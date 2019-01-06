@@ -6,11 +6,12 @@ from Levenshtein import distance
 params_size = 6
 mutate_param_rate = 1e-5
 mutate_word_rate = 10
-initial_pop_size = 15
-min_pop_size = 30
+initial_pop_size = 500
+min_pop_size = 1000
 max_age = 100
-expected_output = 'helloworld'
+expected_output = 'holamundo'
 alphabet = list(string.ascii_lowercase)
+offers = {}
 
 #there is a problem with seratonin. it's maximized instead of minimized or the other
 get_seratonin = lambda agent: -distance(expected_output, agent[2])
@@ -27,7 +28,7 @@ def main():
     seratonin = [math.exp(x) / total for x in seratonins]
 
     while True:
-        reproduce(agents, seratonins)
+        agents, seratonins = reproduce(agents, seratonins)
         debug(agents, seratonins)
         agents, seratonins = kill(agents, seratonins)
 
@@ -46,7 +47,6 @@ def reproduce(agents, seratonins):
 
         offer1 = poly(agent1[1], seratonins[agent1_i], seratonins[agent2_i])
         offer2 = poly(agent2[1], seratonins[agent2_i], seratonins[agent1_i])
-
         if offer1 + offer2 <= 1:
             offer1 = offer1 / (offer1 + offer2)
             gender, param, word = crossover(agent1, agent2, offer1)
@@ -58,6 +58,7 @@ def reproduce(agents, seratonins):
             seratonins = [get_seratonin(a) for a in agents]
             total = sum([math.exp(x) for x in seratonins])
             seratonins = [math.exp(x) / total for x in seratonins]
+    return agents, seratonins
 
 def mutate_param(param):
     return param + np.random.randn(params_size) * mutate_param_rate
@@ -109,13 +110,23 @@ def kill(agents, seratonins):
             agent = (gender, param, word, age + 1)
             new_agents.append(agent)
             new_seratonins.append(seratonins[i])
+
+    avg_fitness = np.mean([get_seratonin(a) for a in agents])
+    agents, seratonins = new_agents, new_seratonins
+    new_agents, new_seratonins = [], []
+    for i, agent in enumerate(agents):
+        if get_seratonin(agent) >= avg_fitness:
+            new_agents.append(agent)
+            new_seratonins.append(seratonins[i])
+
     return new_agents, new_seratonins
 
 def debug(agents, seratonins):
-    print(len(agents), len(seratonins))
+    # print(len(agents), len(seratonins))
     rand_i = np.random.randint(len(agents))
     gender, param, word, age = agents[rand_i]
-    print(f'Word: {word}. Age: {age}')
+    avg_fitness = np.mean([get_seratonin(a) for a in agents])
+    print(f'Word: {word}. Age: {age}. Fitness {avg_fitness}')
 
 main()
 
